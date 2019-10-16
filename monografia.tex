@@ -1,0 +1,57 @@
+\documentclass[a4paper, 11pt]{toptesi}
+
+\usepackage[latin1]{inputenc}
+\usepackage[italian]{babel}
+
+\usepackage{amssymb}
+\usepackage{subfigure}
+
+\usepackage{upgreek}
+
+\usepackage{algorithm}
+
+\usepackage{algpseudocode}
+
+%Opzioni
+\floatname{algorithm}{Algoritmo}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Input:}}
+
+\includeonly{
+	sommario, 	%
+	capitolo1,	%
+	capitolo2,	%
+	capitolo3,	%
+	capitolo4,
+	conclusioni,	%
+	appendici, 	%
+	bibliografia	%
+ }
+
+\begin{document}
+
+% Questo è un commento
+
+\frontespizio
+
+\tableofcontents
+
+\include{sommario}
+
+\include{capitolo1}
+
+\include{capitolo2}
+
+\include{capitolo3}
+
+\include{capitolo4}
+
+\include{conclusioni}
+
+%\appendix
+
+%\include{appendici}
+
+\include{bibliografia}
+
+\end{document}

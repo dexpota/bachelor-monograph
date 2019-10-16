@@ -1,0 +1,255 @@
+\chapter{Sviluppo del progetto}
+
+\section{Ambiente di sviluppo}
+
+Lo sviluppo del progetto è stato portato avanti in ambiente Windows. Il programma è stato pensato per essere eseguito su macchine Windows senza la necessità di intervento umano. Microsoft Visual Studio 2005 è l'ambiente di sviluppo utilizzato per la programmazione e il debug dell'applicativo. La scelta del linguaggio di implementazione è ricaduta sul C++, questa scelta è stata dettata più che altro da questioni di compatibilità con altri software sviluppati dalla Seac02, ma anche dalla possibilità di realizzare un codice a oggetti di facile lettura e modulare.
+
+% Si potrebbe parlare di Visual Studio 2005?
+
+Oltre ai classici strumenti per la programmazione è stato utilizzato SVN un applicativo per il software versioning del codice. Il software versioning è il processo di assegnazione di un nome di versione (o numero di versione) univoco a un univoco stato dell'applicativo in fase di sviluppo. SVN Subversion è un programma per il controllo delle revision chei permette di tenere traccia della differenze incrementali tra diverse versioni del progetto, inoltre consente l'accesso concorrente da parte di un team di sviluppo. SVN è realizzato con un modello client-server, la traccia del progetto è memorizzata lato server e l'utente può richiedere varie operazioni da eseguire su una determinata versione del progetto.
+
+\subsection{Librerie di supporto}
+L'applicativo si basa sull'utilizzo di alcune librerie esterne tra cui Qt, OpenSG e IpOpt. QT è stato utilizzato per la realizzazione del front-end dell'applicativo e come ambiente per ospitare OpenSG. Una versione modificata di OpenSG è utilizzato come gestore scenografico per la creazione di un contesto operativo per la grafica tridimensionale. IpOpt fornisce una serie di routine per la risoluzione di problemi di minimizzazione non lineari, è utilizzato per il processo di unwrapping automatico.
+
+Qt è una libreria multipiattaforma per lo sviluppo di programmi con interfaccia grafica tramite l'uso di widget. Qt, ampiamente utilizzato nell'ambiente desktop KDE, viene sviluppato dall'azienda Qt Software. Qt usa il linguaggio C++ standard con un estensivo uso del preprocessore C per arricchire il linguaggio, ma esistono interfacce per Java, Python, C, Perl e PHP. Gira sulle piattaforme principali ed integra funzioni per l'accesso ai database SQL, parsing di documenti XML ed API multipiattaforma per l'uso dei file. 
+
+OpenSG è un framework basato su OpenGL per la realizzazione di un sistema scenografico creato per programmi di grafica real-time. OpenSG è sviluppato seguendo i principi dei software Open Source, è distribuito sotto licenza LGPL può quindi essere usato gratuitamente. La compatibilità è garantita con i sistemi Microsoft Windows, Linux, Solaris e Mac OS X. Tra le principali caratteristiche c'è il supporto avanzato alla programmazione multithreading e al calcolo distribuito, anche se è perfettamente utilizzabile su una singola macchina in single-thread.
+
+% [possibile sviluppo - modello software versioning utilizzato, + cose su SVN]
+
+% [possibile sviluppo - convenzioni sul lavoro - doxygen]
+
+\subsection{Richieste hardware}
+L'unica richiesta hardware per l'uso del programma è che la scheda video abbia i framebuffer. Il framebuffer è una memoria della scheda video nella quale vengono memorizzate le informazioni destinate all'output per la rappresentazione di un intero fotogramma sullo schermo, sono contenute le informazioni sul colore di ciascun pixel. Le dimensioni del framebuffer dipendono dalla risoluzione dell'output video e dalla profondità di colore. Il framebuffer è utilizzato nell'applicativo per il calcolo dell'ambient occlusion, in particolare vengono utilizzati i risultati delle renderizzazioni della scena memorizzati nel buffer.
+
+% Naming convection
+
+\section{Lavoro precedente}
+
+Il lavoro fin qui svolto è stato già ottenuto da sviluppi precedenti. Proseguiremo ora con la valutazione dei risultati già acquisiti, discutendo se questi rispondono alle nostre necessità. In base a queste valutazioni determineremo i punti critici dell'applicativo e procederemo di conseguenza per ciascuno. Alcune valutazioni porteranno a una completa riconsiderazione dell'approccio seguito, mentre altri richiederanno solamente una ristrutturazione di quello già ottenuto. Prima dei testi di valutazione descriveremo a grandi linee i principi di funzionamento del programma, discutendo sulle principali fasi che intercorrono per il calcolo della scena in output.
+
+\subsection{Obiettivi}
+L'obiettivo è quello di realizzare un programma in grado di calcolare l'ambient occlusion delle geometrie di una scena.
+L'ambient occlusion di ciascuna geometria dovrà essere rappresentata su di una texture che verrà applicata come materiale sulla geometria stessa. Come risultato si vuole ottenere una scena nello stesso formato di quella data con in più applicate le varie texture dell'ambient occlusion calcolate. Il programma si trova già in fase di sviluppo sarà quindi necessario prima fare il punto della situazione ed analizzare i risultati fin qui ottenuti, per poi determinare i passi successivi nella sua realizzazione.
+
+
+\subsection{Struttura del programma} \label{subsez:program_struct}
+Il programma si basa su un principio molto semplice che ne garantisce il funzionamento con qualsiasi scena in ingresso. Il fondamento su cui si basa è il considerare ciascuna
+geometria della scena data in ingresso come composta da un insieme di triangoli. Le fasi successive vengono portate avanti seguendo un approccio orientato ai triangoli,
+in questo modo si può semplificare il calcolo della parametrizzazione $UV$ della geometria è il packing dei triangoli nella texture. Mentre il calcolo dell'ambient occlusion non
+trae particolari vantaggi da questo approccio.
+
+Nella fase preparatoria vengono estratti tutti i nodi geometrie dalla scena data in ingresso. OpenSG organizza la scena in ingresso in una struttura dati ad albero composta
+da una serie di nodi differenti (per la geometria, l'illuminazione, le trasformazioni, ecc ...). Gli unici nodi di nostro interesse sono quelli di trasformazione e di geometria,
+i primi memorizzano le trasformazioni effettuate sulla scena (a partire da quel nodo in poi) mentre i secondi sono i nodi che contengono la struttura dati della mesh.
+L'importanza dei nodi di trasformazione è da ritrovarsi nel fatto che è necessario ricostruire la scena in uscita come si presentava in ingresso, se non si considerasse
+allora la scena in uscita verrebbè ricostruita in modo errato. I nodi di trasformazione non vengono gestiti direttamente ma ne vengono considerati solo gli effetti attraverso
+un metodo richiamabile da ciascuna geometria. All'interno di ciascun nodo geometria è contenuta una struttura dati di OpenSG per la memorizzazione della mesh, per
+ciascuno di essi verranno eseguite le fasi che andremo ora a descrivere.
+
+\subsubsection{Prima fase}
+OpenSG memorizza la geometria in una struttura dati personalizzata che implementa la memorizzazione face-vertex di mesh. Vengono memorizzate due list una per le facce che compongono le geometrie e l'altra per i vertici associati.% [esempio]
+Le informazioni legate a ciascun vertice possono essere memorizzate in tre modalità differenti. La prima è la memorizzazione senza indici, in questo modo ciascun vertice di ciascuna facce replica in memorie le proprie informazioni (posizione, normale, colore, ecc ...).  La seconda è la memorizzazione a singola indicizzazione, in questo caso un vertice può fare riferimento a dati appartenenti ad un altro vertice. L'ultimo tipo è la memorizzazione a indici multipli, differisce dalla precedente dal fatto che il vertice può fare riferimento ai singoli dati di più vertici. Nell'immagine \ref{img:opensg_indexing} si può vedere un riepilogo delle tre modalità di gestione dei dati associati ai vertici.
+
+\begin{figure}[!htb]
+\centering %
+\subfigure[senza indici]{\includegraphics[scale=0.3]{images/previously_work/opensg/no_index.png}}\qquad
+\subfigure[indici semplici]{\includegraphics[scale=0.3]{images/previously_work/opensg/index.png}}\qquad
+\subfigure[multi indice]{\includegraphics[scale=0.3]{images/previously_work/opensg/multi_index.png}}
+\caption{riepilogo delle modalità di memorizzazione}
+\label{img:opensg_indexing}
+\end{figure}
+
+OpenSG mette a disposizione una serie di metodi che permettono di accedere alle singole facce che compongono la geoemtria (triangoli, rettangoli, poligoni, ecc ...), in particolare il metodo Triangle Iterator permette di iterare su ogni triangolo. Questi metodi vengono utilizzati dall'applicativo per l'accesso alla struttura dati della mesh.
+
+Il programma richiede che ogni geometria memorizzi le informazioni per ciascun vertice in modo separato. Il motivo è che durante la fase di parametrizzazione è necessario che ogni vertice possa memorizzare informazioni differenti in funzione della faccia presa in considerazione. Infatti, nello spazio $O_{uv}$, può capitare che un vertice assumi posizioni differenti in funzione del triangolo a cui fa' riferimento, per questo motivo è necessario salvare differenti coordinate di texture per ogni vertice e per ogni faccia. Per questo motivo nella prima fase la geometria viene convertità in modalità di memorizzazione senza indici.
+
+\subsubsection{Seconda fase}
+Nella seconda fase avviene la parametrizzazione della superficie e il packing delle aree ottenute in $O_{uv}$. Per prima cosa ogni triangolo della geometria viene inserito in una classe contenitore ZedAOFaceInfoBuilder che ne calcola le coordinate bidimensionali, queste si otterranno banalmente per proiezione sul piano con normale pari a quella del triangolo considerato. Ogni triangolo viene successivemente traslato in $O_{uv}$ in modo tale che non vi siano coordinate negative.
+
+%[immagine che ne spiega il processo.]
+
+Si passa successivamente al packing delle superfici parametrizzate in $O_{uv}$. Viene quindi instaziato un oggetto della classe ZedAOTextureBoxPacker che si occupa di effettuare il packing delle aree. L'algoritmo utilizzato per il packing segue un approccio greedy per determinare una possibile disposizione dei triangoli su un quadrato. I triangoli vengono ordinati per valore di area decrescente, quindi prosegue con il packing di ciascun triangolo all'interno del quadrato. Il packing procede per traslazioni successive nelle direzioni di $u$ e $v$, fino a quando trova la prima traslazione che non si sovvrappone con i triangoli già inseriti. Durante la fase di packing a ciascun triangolo vengono assegnate le coordinate di texture definitive conformi dalle specifiche che definiremo più avanti
+
+\subsubsection{Terza fase}
+Nella terza ed ultima fase vengono calcolati i texel associati ai triangoli e viene generata la texture dell'ambient occlusion. Intuitivamente i texel associati a un triangolo possono essere definiti come i pixel occupati sull'area UV della texture. I texel vengono calcolati a partire dalle coordinate $UV$ associate ai vertici del triangolo, si procede per costruzione verticale. Si determinano i valori $U_{min}$ e $U_{max}$ tra cui variare con passo equivalente di un pixel, per ogni valore di $U$ si calcolano i valori $V_{min}$ e $V_{max}$, si crea quindi il texel associato le coordinate in pixel corrispondenti al valore attuale di $U$ e $V$ (immagine x). Per ogni texel vengono memorizzate alcune informazioni tra le più rilevanti: il valore delle normale, le
+coordinate $XY$ in pixel e le coordinate $UV.$
+
+Dopo aver determinato i texel che compongono la texture si procede con il calcolo dell'ambient occlusion. Per ogni texel della texture si effettua la renderizzazione della scena vista dalla posizione attuale in direzione e verso della normale del triangolo associato al texel. Si otterrà quindi una immagine della visuale che si ha della scena dalla posizione attuale, in base a questa verrà calcolata la gradazione di grigio da associare al pixel
+
+\subsection{Test sulle mesh di prova}
+Eseguiremo ora una serie di test di valutazione del programma su alcune mesh di prova. Prenderemo quindi in considerazione gli output delle varie fasi e da questi valuteremo
+gli eventuali problemi. Successivamente procederemo con l'analisi delle problematiche riscontrate e la discussione su come risolverle.
+
+\begin{figure}[!b]
+\centering %
+\subfigure[packing]{\includegraphics[scale=0.12]{images/previously_work/monkey/texel_dump.png} \label{img:test_monkey_partial_1}}\qquad
+\subfigure[AO texture]{\includegraphics[scale=0.12]{images/previously_work/monkey/texture.png} \label{img:test_monkey_partial_2}}\qquad
+\caption{output delle fasi intermedie per il modello monkey.obj}
+\label{img:test_monkey_partial}
+\end{figure}
+
+\subsubsection{Test con il modello monkey.obj}
+Prendiamo in considerazione il modello della scimmia monkey.obj, generato con l'aiuto di Blender. L'immagine \ref{img:test_monkey_partial_1} rappresenta l'output della disposizione dei triangoli all'interno della texture, da questa non si riscontrano particolari problemi. La texture dell'ambient occlusion è rappresentata sull'immagine \ref{img:test_monkey_partial_2}, anche in questo caso non si osservano particolari problematiche.
+
+Per determinare il risultato finale utilizziamo i vari output del programma in combinazione con Blender. La scena in uscita in formato obj viene utilizzato come modello per l'applicazione della texture, infatti, questa contiene le coordinate $UV$ calcolate nel programma. Nell'immagine \ref{img:test_monket_out} si può osservare il risultato dell'applicazione della texture sul modello con disattivati tutti i filtri, per poterne osservare il risultato dell'applicazione diretta senza alterazioni.
+
+\begin{figure}[!htpb]
+\centering %
+\includegraphics[scale=0.3]{images/previously_work/monkey/final_output.png}
+\caption{output del modello monkey.obj}
+\label{img:test_monket_out}
+\end{figure}
+
+L'applicazione della texture mette in rilievo alcuni problemi che finora non si erano presentati. Confrontando con l'AO calcolato da Blender si può facilmente osservare che
+il risultato ottenuto non è certamente quello desiderato. Nelle immagini \ref{test_monkey_det_1} e \ref{test_monkey_det_2} si possono osservare due dettagli della scena, nella prima si osservano degli spazi neri in cui non è presenta la texture, nella seconda si osservano le diverse orientazioni dei pixel tra superfici adiacenti.
+\begin{figure}[!htpb]
+\centering %
+\subfigure[tagli]{\includegraphics[scale=0.20]{images/previously_work/monkey/cuts.png} \label{test_monkey_det_1}}\qquad
+\subfigure[discontinuità]{\includegraphics[scale=0.20]{images/previously_work/monkey/discontinuity.png} \label{test_monkey_det_2}}
+\caption{dettagli relativi al modello monkey.obj}
+\end{figure}
+
+\subsubsection{Test con il modello teapot.obj e il modello prova.obj}
+Verifichiamo ora che i problemi riscontrati con il modello monkey.obj si ripresentano con altri modelli. Le immagini \ref{img:test_teapot} e \ref{img:test_prova} rappresentano gli output delle varie
+fasi di esecuzione del programma, la prima del packing e la seconda del calcolo dell'AO Texture.
+
+\begin{figure}[!htb]
+\centering %
+\subfigure[packing]{\includegraphics[scale=0.09]{images/previously_work/teapot/texel_dump.png}}\qquad
+\subfigure[AO texture]{\includegraphics[scale=0.09]{images/previously_work/teapot/texture.png}}
+\caption{output delle fasi intermedie per il modello teapot.obj}
+\label{img:test_teapot}
+\subfigure[packing del piano]{\includegraphics[scale=0.08]{images/previously_work/test/texel_dump_plan.png}}\qquad
+\subfigure[packing della sfera]{\includegraphics[scale=0.08]{images/previously_work/test/texel_dump_sphere.png}}\qquad
+\subfigure[AO texture piano]{\includegraphics[scale=0.08]{images/previously_work/test/texture_plan.png}}\qquad
+\subfigure[AO texture sfera]{\includegraphics[scale=0.08]{images/previously_work/test/texture_sphere.png}}
+\caption{output delle fasi intermedie per il modello prova.obj}
+\label{img:test_prova}
+\end{figure}
+
+Gli stessi problemi verificatesi con il modello monkey.obj si presentano anche questi modelli. Nell'immagine \ref{img:test_output} si può osservare come si presentano le scene in uscita con applicate le texture, mentre nell'immagine \ref{img:teapot_alter} e \ref{img:test_alter}  si vedono i dettagli delle alterazioni non desiderate.
+
+\begin{figure}[!h]
+\centering %
+\subfigure[teapot.obj]{\includegraphics[scale=0.20]{images/previously_work/teapot/final_output.png}}\qquad
+\subfigure[prova.obj]{\includegraphics[scale=0.20]{images/previously_work/test/final_output.png}}
+\caption{output finali}
+\label{img:test_output}
+\end{figure}
+
+\begin{figure}[!h]
+\centering %
+\subfigure[tagli]{\includegraphics[scale=0.15]{images/previously_work/teapot/cuts.png} \label{img:teapot_prova_cuts}}\qquad\qquad
+\subfigure[discontinuità]{\includegraphics[scale=0.15]{images/previously_work/teapot/discontinuity.png} \label{img:teapot_prova_disc}}
+\caption{dettagli relativi al modello teapot.obj}
+\label{img:teapot_alter}
+\end{figure}
+
+\begin{figure}[!h]
+\centering %
+\subfigure[tagli]{\includegraphics[scale=0.15]{images/previously_work/test/cuts.png} \label{img:test_prova_cuts}}\qquad\qquad
+\subfigure[discontinuità]{\includegraphics[scale=0.15]{images/previously_work/test/discontinuity.png} \label{img:test_prova_disc}}
+\caption{dettagli relativi al modello prova.obj}
+\label{img:test_alter}
+\end{figure}
+
+\subsection{Valutazioni finali}
+Abbiamo potuto osservare che i risultati ottenuti non soddisfano i requisiti di resa grafica desiderata. Mentre non si osservano particolari problemi negli output intermedi del programma, sono almeno due le alterazioni non desiderate dovute all'applicazione della texture sulla superficie. L'alterazione più evidente è certamente quella visibile nelle immagini \ref{img:test_prova_cuts} e \ref{img:teapot_prova_cuts}, in cui si osservano delle striscie nere presenti sull'intera superficie. Questa è dovuta al fatto che per alcuni triangoli non vengono generati sufficienti texel per ricoprire l'intera superficie in $O_{uv}$.
+
+La seconda problematica riscontrata è la discontinuità presente tra i pixel di facce adiacenti (figura \ref{img:test_prova_disc} e \ref{img:teapot_prova_disc}). La ragione è da ricercarsi probabilmente nel fatto che facce adiacenti sulla mesh sono mappati con aree distanti tra loro. Considerando che le aree in Ouv vengono rasterizzate tutte nello stesso verso, una volta applicata la texture sulla mesh, non si può garantire che l'orientazione  dei pixel su facce differenti della mesh sia la stessa per facce adiacenti (per via delle disposizioni differenti delle aree in $O_{uv}$). %**si può migliorare [immagine che spiega il concetto]
+
+La risoluzione della prima problematica richiede di rivedere l'algoritmo utilizzato per il calcolo dei texel, probabilmente non sarà necessario applicare grandi modifiche. Per eliminare le discontinuità sarà necessario ripensare interamente l'algoritmo di unwrapping, infatti per risolvere questo problema è necessario che facce adiacenti sulla mesh siano mappate in aree anch'esse adiacenti. Nel prossimo capitolo discuteremo la risoluzione dettagliata dei problemi riscontrati con il programma iniziale.
+
+\section{Progetto}
+
+L'obiettivo è quello di revisionare il programma già esistente in modo da rispettare appieno le specifiche richieste. Vogliamo ottenere un programma che sia in grado di calcolare l'AO texture associata a una scena. La texture ottenuta deve essere il più possibile simile a quello che si otterrebbè calcolando direttamente l'AO in tempo reale sulla geometria. Questo programma renderebbe possibile precalcolare l'AO associato a grandi scene e salvarne il risultato, permettendo di risparmiare tempo durante la renderizzazione della scena.
+
+\subsection{Analisi delle specifiche}
+Descriviamo ora brevemente le specifiche che il programma deve rispettare. Le specifiche sono definite solamente sui dati in ingresso e sui risultatati attesi, non si richiedono particolarità sul metodo seguito per ottenerli.
+
+Il programma deve essere in grado di prendere in input da linea di comando il nome di un file (compreso di directory) contenente i dati sulla scena. Questo file sarà in un formato standard per la rappresentazione delle mesh, in particolare nei formati obj e osb (formato per OpenSG). Oltre a questo il programma non avrà a disposizione nessuna altra informazione sulla scena, eventuali dati necessari per il calcolo del risultato dovranno essere ricavati durante l'elaborazione.
+
+In uscita si dovrà ottenere un file identico a quello preso in ingresso (stesso formato) con in più applicata la texture dell'AO. L'obiettivo è quello di calcolare l'AO dell'intera scena e aggregarla alla scena stessa come texture, il programma dovrà quindi eventualmente calcolare le coordinate UV e disporle sul piano della texture.
+
+Eventualmente il programma dovrà fornire informazioni aggiuntive utili per il debug in caso di errore. Non si richiede un particolare formato o struttura per le eventuali informazioni di debug in uscita, queste dovranno solamente essere espresse in modo chiaro, conciso e riportare in maniera coerente con la struttura del programma. %(da rivedere) concetto blocco info 1 - > fase 1 del programma.
+
+Il programma dovrà essere in grado di operare su qualsiasi mesh data in ingresso. Nel caso in cui non sia in grado di ottenere la scena in uscita, dovrà fornire sufficienti informazioni sulla tipologia di problema riscontrato in modo tale da permetterne il debug. %**non contrasta con quello che ho scritto sopra?
+
+\subsection{Risoluzione problematiche riscontrate}
+Nel capitolo precedente abbiamo già analizzato i risultati ottenuti fino ad ora. Le specifiche stilate vengono tutte soddisfatte dalla prima versione del programma eccetto
+per alcune imperfezioni sull'applicazione della texture alla scena. Ci concentreremo quindi sulla risoluzione delle problematiche riscontrate analizzandole e discutendo
+i possibili approcci da seguire per migliorare la resa della texture.
+
+\subsubsection{Texel mancanti}
+Il problema che più si nota è sicuramente quello dovuto all'applicazione della texture sulle singole facce che porta ad avere porzioni di mesh non ricoperte. Come già discusso
+l'origine di queste alterazioni è da ricercarsi nella fase di calcolo dei texel, per qualche motivo l'algoritmo non riesce a ricavare texel sufficienti a ricoprire interamente
+le facce della mesh.
+
+%Descriviamo ora brevemente l'algoritmo utilizzato per il calcolo dei texel (pseudocodice x) e cerchiamo di proporre una versione differente dell'algoritmo stesso. TODO descrivere l'algoritmo [pseudocodice]
+%TODO come risolverlo -> contorni
+
+\subsubsection{Discontinuità}
+La seconda problematica riscontrata è la discontinuità della texture presente sulle facce adiacenti della mesh. Abbiamo effettuato alcuni test e abbiamo notato che questo problema si presenta  maggiormente con texture di piccole dimensioni. Nell'immagine \ref{img:prev_work} mettiamo a confronto l'applicazione di texture di differenti dimensioni sul modello prova.obj (le texture sono state calcolate con la prima versione del programma). Il motivo per cui le discontinuità sono più visibili con texture di piccole dimensioni è che la dimensione del pixel sulla faccia della mesh è inversamente proporzionale alla dimensione della texture.
+
+\begin{figure}[!h]
+\centering %
+\subfigure[256px x 256px senza filtro]{\includegraphics[scale=0.13]{images/previously_work/discontinuity/prova_256.png}}\qquad 
+\subfigure[512px x 512px senza filtro]{\includegraphics[scale=0.13]{images/previously_work/discontinuity/prova_512.png}}\qquad 
+\subfigure[1024px x 1024px senza filtro]{\includegraphics[scale=0.13]{images/previously_work/discontinuity/prova_1024.png}}\qquad 
+\label{img:prev_work}
+\end{figure}
+
+Il problema è dovuto ai diversi versi di rasterizzazione seguiti da superfici adiacenti sulla mesh. Per risolvere il problema si possono seguire diversi approcci che operano a livelli differenti del programma. Una possibile soluzione prevede che la scena in output venga renderizzata applicando alla texture un particolare filtro, seguendo le false righe di quello che fa' Blender. Nell' immagine \ref{img:prev_work_filter} possiamo vedere come aumenta la resa delle texture applicando l'opzione Mipmaps di Blender (File \textrightarrow User Preferences \textrightarrow System \textrightarrow OpenGL). 
+
+\begin{figure}[!h]
+\centering %
+\subfigure[256px x 256px senza filtro]{\includegraphics[scale=0.12]{images/previously_work/discontinuity/prova_256.png}}\qquad 
+\subfigure[512px x 512px senza filtro]{\includegraphics[scale=0.12]{images/previously_work/discontinuity/prova_512.png}}\qquad 
+\subfigure[1024px x 1024px senza filtro]{\includegraphics[scale=0.12]{images/previously_work/discontinuity/prova_1024.png}}\qquad 
+\subfigure[256px x 256px con filtro]{\includegraphics[scale=0.12]{images/previously_work/discontinuity/prova_256_filtrata.png}}\qquad 
+\subfigure[512px x 512px con filtro]{\includegraphics[scale=0.12]{images/previously_work/discontinuity/prova_512_filtrata.png}}\qquad 
+\subfigure[1024px x 1024px con filtro]{\includegraphics[scale=0.12]{images/previously_work/discontinuity/prova_1024_filtrata.png}}\qquad  
+\caption{confronto delle texture con e senza filtro}
+\label{img:prev_work_filter}
+\end{figure}
+
+Si può notare una netta diminuizione delle discontinuità dovuta all'applicazione del filtro. Per quanto riguarda il problema dovuto alla non presenza dei texel questo non viene migliorato,
+anzi si può osservare un aumento della visibilità del fenomeno. Inoltre questo metodo è dipendente dall'applicativo utilizzato per aprire la scena, se questo non implementasse (oppure non attivasse)
+la funzionalità di filtro della texture allora non si otterrebbe nessun miglioramento. Per questo motivo considereremo questo approccio non utilizzabile.
+
+In alternativa è possibile seguire un approccio che si basa sulla disposizione delle aree in $O_{uv}$. Il principio di base è che per prevenire le discontinuità sia necessario disporre i triangoli adiacenti
+nella mesh in modo adiacente nel piano $O_{uv}$. Bisogna quindi utilizzare un algoritmo di unwrapping che sia in grado di mantenere l'adiacenza tra la maggior parte dei vertici della mesh.
+Procederemo quindi a una completa revisione dell'algoritmo di unwrapping utilizzato nell'applicativo.
+Per il calcolo dell'unwrapping utilizzeremo un metodo che utilizza i principi della programmazione matematica
+per minimizzare il discostamento in termini di angoli tra la mesh e l'area in $O_{uv}$. Utilizzeremo una versione modificata dell'algoritmo ABF++ \cite{cit:abf}, frutto del lavoro di Sheffer A. e De Sturler pubblicato nel 2001.
+Nella sezione \ref{sec:aabf} tratteremo in dettaglio il funzionamento dell'algoritmo e le modifiche apportategli per rispondere alle nostre necessità.
+
+\subsection{Struttura del programma}
+La struttura originale del programma rimarrà pressochè inalterata, verranno invece aggiunte nuove funzionalità. Il programma manterrà la strutturazione in fasi della prima versione (sezione \ref{subsez:program_struct}), il listato \ref{alg:prog_struct} ne riassume i principali passi.
+
+\begin{algorithm}[!htb]
+\caption{Algoritmo di ricostruzione}
+\label{alg:prog_struct}
+\begin{algorithmic}[1]
+\Procedure{ParametrizzazioneScena} {Scena S}
+	\State Vector[Geometria] geometrie = S.estraiGeometrie();
+	\State Vector[Texel] texels;
+	\For{Geometria G = geometrie.inizio(); G != geometrie.fine(); G = geometrie.estraiProssimaGometria(G)}
+		\State G.convertiInNoIndici();
+		\State
+		\State OttieniParametrizzazioneUV(G);
+		\State DisponiSuperfici(G);
+		\State 
+		\State texels = calcolaTexels(G);
+		\State Immagine texture = calcolaAO(G, texels);
+		\State ApplicaTexture(G, texture);
+		\State
+		\State LiberaMemoria(texels, texture);
+	\EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+Le principali modifiche riguarderanno la struttura dati, l'algoritmo di unwrapping e l'algoritmo di costruzione dei texel. Procederemo ora con la trattazione delle principali modifiche nello stesso
+ordine in cui sono state affrontate durante l'implementazione.

@@ -1,0 +1,162 @@
+% La suddivisione in parti non è necessaria nella monografia \part{Nome della parte}
+\chapter{Stato dell'arte}
+
+\section{Unwrapping}
+
+L'unwrapping è un metodo utilizzato per la parametrizzazione di superfici. Permette di determinare una possibile associazione tra una mappa bidimensionale e una superficie tridimensionale. La mappatura bidimensionale cerca di preservare vari parametri della mesh originale, tra i quali: l'adiacenza dei vertici, la lunghezza degli edge e l'area delle facce. Naturalmente una mappatura tra uno spazio trimensionale e uno bidimensionale non può mantenere inalterata la natura della superficie tridimensionale. L'applicazione dell'unwrapping prevede l'uso di questa tecnica in vari ambiti tra i quali il texture mapping e il geometry processing.
+
+%Possibile sviluppo
+%\subsection{Campi di applicazione}
+%Prova a sviluppare un paio di paragrafi qua.
+
+\subsection{Definizione del problema}
+L'unwrapping è utilizzato per ottenere una corrispondenza biunivoca tra i punti dello spazio $\mathbb{R}^3$ e i punti dell'area $\mathbb{R}^2$. Questa associazione deve cercare di preservare la forma della superficie originale, deve quindi mantenere inalterate determinate proprietà. Idealmente la trasformazione applicata alla superficie dovrebbe essere un isomorfismo, vedremo successivamente che non sempre è così.
+
+\subsubsection{Parametrizzazione}
+Prendiamo in considerazione uno spazio euclideo a tre dimensioni e un sistema di riferimento ortonormale $O_{xyz}$, insieme a un sistema di riferimento $O_{uv}$ associato a uno spazio euclideo a due dimensioni. Supponiamo ora di avere a disposizione l'equazione cartesiana di una generica superficie $S$, espressa mediante la funzione $f(x,y):D \subset \mathbb{R}^2 \rightarrow~\mathbb{R}$.
+
+L'associazione tra i punti della superficie $S$ nello spazio $O_{xyz}$ e i punti del piano $O_{uv}$ deve cercare di preservare la topologia della superficie. Una parametrizzazione ideale dovrebbe conservare le distanze e l'adiacenza dei punti sulla superficie, insieme all'area complessiva della superficie~$S$. 
+
+\subsubsection{Proprietà della parametrizzazione}
+% Potrei mettere qualcosa prima?. Una parametrizzazione ideale dovrebbe soddisfare alcune proprietà.
+La proprietà di conservazione delle distanze superficiali deve essere verificata per ogni coppia di punti della superficie $S$. Prendiamo in considerazione due punti $P_0$ e $P_1$ appartenenti ad $S$, e le relative parametrizzazione $Pr_0$ e $Pr_1$ in in $O_{uv}$. Per ogni arco di curva $\gamma(r,s):\mathbb{R}^2\rightarrow I\subset S$ continuo e che connette $P_0$ con $P_1$, la parametrizzazione dell'insieme dei punti dell'immagine di $\gamma(t)$ deve descrivere un arco $\lambda(t)$ in $\mathbb{R}^2$ continuo e di pari lunghezza .
+% Mettere la formua?
+% Decidere se mettere immagini o meno, vediamo più avanti.
+
+Per ogni coppia di punti della superficie $S$ è necessario conservarne l'adiacenza superficiale. Dati due punti $P_0$ e $P_1$ appartenenti ad $S$, e le relative parametrizzazioni $Pr_0$ e $Pr_1$ in in $O_{uv}$. Se esiste una curva sulla superficie $S$ che collega i punti $P_0$ e $P_1$, allora deve esistere una curva continua in $O_{uv}$ di estremi $Pr_0$ e $Pr_1$ e composta solo da punti parametrizzati di $S$.
+% Potrei commentare che la proprietà precedente non è sufficiente.
+
+La parametrizzazione deve anche conservare l'area superficiale di $S$, questa deve coincidere con l'area della sua parametrizzazione in $O_{uv}$. In altri termini, l'integrale di superficie su $S$ (area superficiale) deve essere pari all'integrale doppio su $M$ (area), in formule:
+% Scrivi di più
+
+\subsubsection{Semplificazione per le mesh}
+Nel caso in cui la superficie $S$ sia rappresentata attraverso una mesh $M$ si possono fare alcune semplificazioni delle proprietà che la parametrizzazione deve mantenere. La mesh $M$ risulta composta da una serie di vertici e lati, questi definiscono un insieme di facce che rappresentano la superficie $S$. La natura discreta della mesh permette di considerarla come definita completamente da un grafo $G$ in cui i nodi e gli archi corrispondono ai vertici ed ai lati di $M$, agli archi di G associamo come pesi il valore della distanza tra i vertici che collegano. In modo simile si definisce il grafo $Gp$ associato alla parametrizzazione della mesh.
+
+La proprietà di conservazione delle distanze superficiali deve essere verificata per ogni coppia di nodi di $G$. Per ogni cammino esistente tra una coppia di nodi di $G$ deve esistere un cammino in $Gp$ della stessa lunghezza e composto dalle parametrizzaioni dei nodi del primo cammino.
+% Mettere immagine? vedremo se il tempo lo permetterà.
+% Mettere formula matematica?
+
+La proprietà di adiacenza superficiale deve essere verificata per ogni coppia di nodi di $G$. Se esiste un cammino tra due nodi di $G$, allora deve esistere un cammino tra le parametrizzazioni dei nodi.
+% In formule.
+
+L'area superficiale di $S$ deve rimanere inalterata per la sua parametrizzazione. Nel caso di mesh questa proprietà può essere semplificata considerando singolarmente tutte le facce di $M$. Ogni faccia della mesh M deve conservare la sua area durante la parametrizzazione.
+% In formule.
+
+\subsection{Processo di parametrizzazione}
+La parametrizzazione di una mesh $M$ in uno spazio bidimensionale non è unica. Esistono differenti metodi che portano ad ottenere diverse mappature della superficie in $O_{uv}$. In ogni caso non è possibile garantire che la parametrizzazione di una superficie crei una mappatura isometrica tra i due domini. Di conseguenza l'area ottenuta in $O_{uv}$  sarà soggetta ad alcuni tipi di errori. L'unicà proprietà che necessariamente deve verificare è che la mappatura sia localmente biiettiva, in altri termini che non esistano sovvrapposizioni tra le facce di $M$.
+
+Come già detto non è sempre possibile determinare una mappatura isometrica di una mesh $M$. Molte mesh non ammettono nessuna parametrizzazione bidimensionale valida queste vengono definite come 'superfici non sviluppabili'.  Alcuni algoritmi sono in grado di individuare queste tipologie di superfici e determinarne una parametrizzazione che soddisfi le proprietà di isomorfismo, questi però non sono in grado di trattare il caso in cui la superficie non permetta una trasformazione isometrica tra i due spazi. Per questo motivo molti algoritmi non puntano a determinare una mappatura isometrica ma bensì cercano di approssimare la parametrizzazione puntando a minimizzare l'errore commesso.
+
+\subsection{Unwrapping in pratica}
+Gli algoritmi di unwrapping hanno come obiettivo quello di determinare una possibile parametrizzazione di una superficie tridimensionale. Come già detto non è possibile, almeno per la maggior parte delle superfici, determinarne una mappatura che conservi la topologia della superficie originale. Per questo motivo l'unwrapping in pratica agisce come un ottimizzatore che cerca di ridurre l'errore commesso nella fase di parametrizzazione, mantenendo la biiettività locale.
+
+Alcuni algoritmi di unwrapping agiscono in due fasi. In un primo momento determinano attraverso un algoritmo che potremo definire 'greedy' una possibile parametrizzazione della superficie. Procedono successivamente al raffinamento della soluzione iniziale cercando di ridurre l'errore commesso. Nella seconda fase possono cercare di minimizzare l'errore commesso nelle lunghezze degli edge o nell'area delle facce. Tra questi algortimi alcuni non prevedono la prima fase ma determinano immediatamente la soluzione che minimizza il discostamento dalla soluzione ottima secondo un particolare parametro.
+
+Altri algoritmi di unwrapping si basano su simulazioni fisiche. Considerano la mesh come un insieme di masse puntiformi (i vertici) e di molle (gli edge) e ne determinano i parametri fisici come le masse e la costanti elastiche. Simulano quindi l'applicazione di una forza esterna che verrà utilizzata per trascinare la superficie contro un piano fittizio rappresentante il piano di parametrizzazione $O_{uv}$. Nella fase di simulazione dello scontro tra la superficie e il piano vengono prese in considerazione alcune regole. Il piano viene considerato inamovibile e non sensibile agli urti della mesh. Lo scontro della mesh con il piano deve prevenire qualsiasi sovvrapposizione tra le facce della mesh, per questo motivo vengono effettuate delle correzioni. Durante lo scontro la mesh viene portata ad adagiarsi sul piano, per questo motivo la forza iniziale viene ridistribuita su punti differenti, inoltre vengono calcolati dei punti di strappo sulla mesh per permettere l'effettiva collisione con il piano.
+
+% TODO Commentare il taglio sulla mesh.
+
+\begin{figure}[!hb]
+\centering %
+\subfigure[Unwrapping]{\includegraphics[scale=0.12]{images/state_of_art/unwrapping/prova_1.png}}\qquad\qquad
+\subfigure[Smart UV Projects]{\includegraphics[scale=0.12]{images/state_of_art/unwrapping/prova_2.png}}\qquad\qquad
+\caption{unwrapping per il modello prova.obj}
+\label{img:soa_unwrapping_test}
+
+\subfigure[Unwrapping]{\includegraphics[scale=0.12]{images/state_of_art/unwrapping/monkey_1.png}}\qquad\qquad
+\subfigure[Smart UV Projects]{\includegraphics[scale=0.12]{images/state_of_art/unwrapping/monkey_2.png}}\qquad\qquad
+\caption{unwrapping per il modello monkey.obj}
+\label{img:soa_unwrapping_monkey}
+
+\subfigure[Unwrapping]{\includegraphics[scale=0.12]{images/state_of_art/unwrapping/teapot_1.png}}\qquad\qquad
+\subfigure[Smart UV Projects]{\includegraphics[scale=0.12]{images/state_of_art/unwrapping/teapot_2.png}}\qquad\qquad
+\caption{unwrapping per il modello teapot.obj}
+\label{img:soa_unwrapping_teapot}
+\end{figure}
+
+\subsection{Alcuni esempi}
+I programmi di computer grafica 3D utilizzano l'unwrapping principalmente per il calcolo della mappa $UV$ (texture mapping). Lo spazio $UV$ viene utilizzato per la rappesentazione delle parametrizzazioni, è un sottospazio del piano $\mathbb{R}^2$ ed è definito da tutte le coppie di punti $(u,v)$ tali per cui $0<u<1$ e $0<v<1$. La mappa UV viene utilizzata per il texture mapping una tecnica che permette di applicare una immagine sopra una superficie, con lo scopo di conferire maggiori dettagli al modello.
+% Magari era da mettere sopra.
+
+Blender implementa varie tecniche che consentono di determinare una parametrizzazione per una generica superficie. Alcuni metodi di unwrapping sono automatizzati, mentre altre richiedono che l'utente fornisca delle informazioni iniziali (taglio sulla mesh). Le immagini \ref{img:soa_unwrapping_test}, \ref{img:soa_unwrapping_monkey} e \ref{img:soa_unwrapping_teapot} illustrano i risultati ottenuti in Blender utilizzando i metodi 'Unwrapping' e 'Smart UV Projects'.
+
+
+% TODO \section{2D packing}
+
+\section{Ambient occlusion}
+
+L'ambient occlusion è un modello di riflessione locale della luce utilizzato per il calcolo dell'ombreggiatura. Contribuisce al conferimento di maggiore realismo ai modelli di illuminazione utilizzati nella computer grafica 3D. Il calcolo dell'ambient occlusion permette di ricavare l'attenuazione luminosa in ogni punto della geometria. Questo metodo globale fornisce un indice di illuminazione per ciascun punto, che è funzione della geometria della scena.
+
+% Concetto sul calcolo dell'AO.
+I metodi di calcolo dell'ambient occlusion si basano sulla visibilità che la superficie ha dello sfondo. Per determinare l'indice di luminosità di una superficie tridimensionale vengono tracciati dei raggi in ogni direzione dalla stessa. I raggi che intercettano un altro oggetto nella scena non contribuiscono alla luminosità della superficie, mentre quelli che raggiungono lo sfondo nè aumentano l'illuminazione. Di conseguenza sarà possibile attribuire ad ogni punto della supericie un indice di illuminazione che si basa sul numero di raggi che raggiungono o meno lo sfondo della scena.
+
+\section{Applicazioni}
+Ha avuto successo nella produzione di animazioni grazie alla sua relativa semplicità e efficienza. In gergo ambient occlusion viene chiamato anche "sky light". Una buona caratteristica di questo metodo di shading è quella di offrire una migliore percezione della forma tridimensionale degli oggetti mostrati. Questo fatto è riportato dai risultati di esperimenti che dimostrano la superiore resa della profondità prodotta da uniforme illuminazione "sky light" diffusa rispetto alla "direct lighting". L'ambient occlusion è legata all'accessibility shading, che si basa sulla facilità con cui un certo elemento (polvere, luce ecc...) può raggiungere ogni punto di una superficie (si pensi ad un oggetto poroso in cui i buchi meno accessibili tendono a rimanere coperti di polvere).
+
+\subsection{Definizione del problema}
+Data una superficie in forma cartesiana è possibile ricavare per ogni suo punto il valore dell'indice di luminosità associato.Ipotizziamo di avere a disposizione l'equazione cartesiana che descrive la superficie $S$ orientabile $f(x,y) : D \subset \mathbb{R}^2 \rightarrow \mathbb{R}$, inoltre supponiamo che $f(x,y)$ sia differenziabile su tutti i punti interni a $D$.
+
+Per ogni punto $P \in D$ è possibile quindi ricavare due piani tangenti alla superficie $S$ nel punto $A(P_x, P_y, f(P))$ e da questo determinare le normali $n(n_x, n_y, n_z)$ e $n'(-n_x, -n_y, -n_z)$. Dato che S è orientabile sarà possibile definire un campo vettoriale $n:S\subset \mathbb{R}^3 \rightarrow \mathbb{R}^3$ continuo che associa ad ogni punto $P$ della superficie la sua normale $n$. Da questo momento in poi ad ogni punto $A \in S$ associeremo un unico piano tangente $ \uppi $ 'orientato', definito come
+\begin{displaymath}
+\uppi: n_x x + n_y y + n_z z + d = 0
+\end{displaymath}
+con $n(A) = (n_x, n_y, n_z)$.
+% Immagine del piano tangente
+
+L'ambient occlusion in un punto $A(P_x, P_y, f(P))\in S$ può essere espresso in funzione della visibilità che si ha dello sfondo dal punto di osservazione. Definiamo la funzione $V_A(\omega):\mathbb{R}^3 \rightarrow \mathbb{R}$ che esprime l'accessibilità dello sfondo da parte del raggio che si origina dal punto $A$ e prosegue parallelamente a $\omega$ nello stesso verso.
+\begin{displaymath}
+V_A(\omega) = \left\{
+\begin{array}{rl}
+ 0 & \mbox{se in direzione di $\omega$ il raggio non colpisce altre geometrie} \\ 
+ 1 & \mbox{altrimenti}
+\end{array}
+\right.
+\end{displaymath}
+
+Naturalmente i vettori $\omega$ che potranno contribuire direttamente all'aumento della luminosità del punto sono solo quelli che si trovano sul semispazio positivo delimitato dal piano $\uppi$, cioè tutti quei $\omega$ tali per cui $\omega \cdot n > 1$. Inoltre vengono considerati solamente i vettori $\omega$ a norma unitaria, in definitiva $\omega$ potrà variare nell'insieme
+$$ \Omega = \{ \omega \in \mathbb{R}^3 : \omega \cdot n > 0 \wedge \left\| \omega \right\| = 1 \} $$
+L'insieme $\Omega$ definisce una semisfera giacente sul semipiano positivo di $\uppi$ e traslata nell'origine.
+
+Abbiamo ora tutti i dati necessari a determinare l'indice di visibilità associato al punto $A(P_x, P_y, f(P)) \in S$. L'occlusione può essere ricavata calcolando l'integrale di superficie di $V_a$ lungo la semisfera $\Omega$ rispetto all'angolo tra $n$ e $w$
+$$ O(A) = \frac{1}{\uppi} \int\!\!\!\int_\Omega V_A(\omega)  (n \cdot \omega)  d\Omega $$
+Il valore dell'integrale è massimo nel caso in cui per ogni $\omega \in \Omega, \; V_a(w) = 1$ e il suo valore è $2\uppi$, in questo caso il punto è completamente circondato da altre geometrie. Il valore minimo dell'integrale è 0 e si ha nel caso in cui il punto considerato abbia una visuale della scena completamente sgobra da altre goemetrie.
+
+L'indice di luminosità associato al punto $A$ può quindi essere ricavato in modo complementare dal valore dell'occlusione. Di conseguenza i punti della superficie circondati da molte altre geometrie otterrannò un basso indice di luminosità, mentre i punti più liberi da ingombri risulteranno più luminosi.
+
+\subsection{Ambient occlusion in pratica}
+Nella pratica per approssimare questo integrale vengono utilizzate diverse tecniche, la più diretta è probabilmente quella che prevede l'uso del metodo Monte Carlo per tracciare raggi dal punto $A$ e valutare le intersezioni con la geometria della scena. (ray casting). Un altro approccio (più adeguato per l'accelerazione hardware) è quello di rasterizzare le geometrie viste dal punto $A$ (a cui viene assegnato il colore nero) in confronto allo sfondo (a cui viene assegnato il colore bianco) e poi prendere in considerazione una media ponderata delle porzioni rasterizzate. Quest'ultimo metodo è un esempio di approccio "inside-out" (o "gathering"), mentre altri algoritmi (come la depth-map ambient occlusion) utilizzano tecniche di "scattering" o "outside-in".
+
+Nel nostro programma l'ambient occlusion viene calcolato utilizzando un approccio 'inside-out'. La geometria viene suddivisa in un insieme di triangoli, utilizzando un processo di triangolizzazione della mesh. Ogni triangolo $T$ viene quindi discretizzato in un insieme di punti $P_t$, per ciascuno di essi viene renderizzata la scena visibile dal punto in direzione della normale alla superficie $T$. Le geometrie visibili saranno rasterizzate nel buffer video con un colore nero, mentre allo sfondo sarà assegnato il colore bianco. L'occlusione $O(A$) sarà quindi calcolata come media pesata dei singoli contributi in pixel della texture. Da questo valore sarà possibili determinare la luminosità associata al punto $P_t$ del triangolo $T$.
+
+\subsection{Alcuni esempi}
+
+L'ambient occlusion conferisce maggiore realismo all'illuminazione di una scena. Questa tecnica è ampiamente diffusa nei programmi di elaborazione tridimensionale e non solo, viene utilizzata anche nei videogiochi e nei simulatori di realtà virtuale. Una versione real time per il calcolo dell'ambient occlusion viene utilizzata per il rendering in tempo reale (ad esempio nei videogiochi) ed è chiamata Screen Space Ambient Occlusion (SSAO). Il calcolo dell'ambient occlusion lo troviamo implementato in Blender attraverso l'uso di un metodo statistico non parametrico e del ray casting. 
+
+\subsubsection{Blender}
+Vediamo ora come si utilizza il calcolo dell'ambient occlusion in blender. I settaggi dell'ambient occlusion si trovano nel pannello Shading, una sottovoce del pannello World. Per default l'ambient occlusion è inattivo, se viene attivato, nel pannello appaiono le relative opzioni (\figurename~\ref{fig:soa_ao_blender}).
+
+\begin{figure}[!h]
+\centering %
+\includegraphics[scale=0.3]{images/state_of_art/ao/blender/ao.jpg}
+\caption{configurazione dell'ambient occlusion in Blender 2.57.1 \label{fig:soa_ao_blender}}
+\end{figure}
+
+Blender utilizza il ray casting per il calcolo dell'occlusione associato a un punto della geometria. I raggi sono inviati all'emisfero secondo una distribuzione casuale fino a che il numero di raggi emessi è sufficientemente elevato da fornire buoni dati statistici,  questo causa differenze sensibili nel pattern di occlusione dei pixel circostanti. Ecco perchè il calcolo dell'AO genere immagini con grana, che appaiono un po sporche se non ci sono abbastanza raggi. Il numero di raggi emessi è controllato dal pulsante numerico Samples (campionamenti). Il valore di default 5 è generalmente adatto a generare anteprime, il reale numero di raggi emessi è questo valore al quadrato. Ovviamente anche i tempi di rendering aumentano con l'aumentare del numero dei campionamenti.
+
+\begin{figure}[!htpb]
+\centering %
+\subfigure[1 campione]{\includegraphics[scale=0.13]{images/state_of_art/ao/blender/monkey_ray_1sample.png}}\qquad
+\subfigure[25 campioni]{\includegraphics[scale=0.13]{images/state_of_art/ao/blender/monkey_ray_5sample.png}}\qquad
+\subfigure[100 campioni]{\includegraphics[scale=0.13]{images/state_of_art/ao/blender/monkey_ray_10sample.png}}\qquad
+\caption{ambient occlusion per il modello monkey.obj}
+
+\subfigure[1 campione]{\includegraphics[scale=0.13]{images/state_of_art/ao/blender/prova_ray_1sample.png}}\qquad
+\subfigure[25 campioni]{\includegraphics[scale=0.13]{images/state_of_art/ao/blender/prova_ray_5sample.png}}\qquad
+\subfigure[100 campioni]{\includegraphics[scale=0.13]{images/state_of_art/ao/blender/prova_ray_10sample.png}}\qquad
+\caption{ambient occlusion per il modello prova.obj}
+
+\subfigure[1 campione]{\includegraphics[scale=0.13]{images/state_of_art/ao/blender/teapot_ray_1sample.png}}\qquad
+\subfigure[25 campioni]{\includegraphics[scale=0.13]{images/state_of_art/ao/blender/teapot_ray_5sample.png}}\qquad
+\subfigure[100 campioni]{\includegraphics[scale=0.13]{images/state_of_art/ao/blender/teapot_ray_10sample.png}}\qquad
+\caption{ambient occlusion per il modello teapot.obj}
+\end{figure}
