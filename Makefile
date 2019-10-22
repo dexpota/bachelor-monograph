@@ -13,9 +13,6 @@ help:
 all: | tex pdf ## Generate pdf and tex.
 	@echo "+ $@"
 
-.PHONY: tex
-tex: $(TEX) ## Generate tex.
-
 .PHONY: pdf
 pdf: $(PDF) ## Generate pdf.
 
