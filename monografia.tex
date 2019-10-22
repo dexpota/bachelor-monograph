@@ -1,11 +1,11 @@
-\documentclass[a4paper, 11pt]{toptesi}
+\documentclass[a4paper, 11pt, tipotesi=topfront]{toptesi}
 
 \usepackage[latin1]{inputenc}
 \usepackage[italian]{babel}
 
 \usepackage{amssymb}
 \usepackage{subfigure}
-
+\usepackage{topfront}
 \usepackage{upgreek}
 
 \usepackage{algorithm}
@@ -32,7 +32,16 @@
 
 % Questo è un commento
 
-\frontespizio
+\begin{frontespizio}
+\facolta[III]{Ingegneria}
+\corsodilaurea{Ingegneria Informatica}
+\NomeMonografia{Monografia di tirocinio}
+\monografia{Texture mapping}
+\sottotitolo{Texture mapping applicato al calcolo dell'ambient occlusion}
+\candidato{Fabrizio Destro}
+\sedutadilaurea{Ottobre 2011}
+\logosede{./images/polito}
+\end{frontespizio}
 
 \tableofcontents
 
